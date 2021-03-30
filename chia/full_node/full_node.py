@@ -854,10 +854,10 @@ class FullNode:
             assert mempool_item is not None
             fees = mempool_item.fee
             assert fees >= 0
-            assert result.cost is not None
+            assert mempool_item.cost is not None
             new_tx = full_node_protocol.NewTransaction(
                 spend_name,
-                result.cost,
+                mempool_item.cost,
                 uint64(bundle.fees()),
             )
             msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
@@ -956,6 +956,7 @@ class FullNode:
                     error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
                     fork_height: Optional[uint32] = None
                 else:
+                    breakpoint()
                     raise ValueError(
                         f"Failed to validate block {header_hash} height "
                         f"{block.height}: {Err(pre_validation_results[0].error).name}"

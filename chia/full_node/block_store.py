@@ -1,18 +1,15 @@
-import asyncio
 import logging
 from typing import Dict, List, Optional, Tuple
 
 import aiosqlite
 
-from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
-from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
-from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32
-from chia.util.lru_cache import LRUCache
+from src.consensus.block_record import BlockRecord
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from src.types.full_block import FullBlock
+from src.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
+from src.util.ints import uint32
+from src.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
@@ -200,27 +197,6 @@ class BlockStore:
             if hh not in all_blocks:
                 raise ValueError(f"Header hash {hh} not in the blockchain")
             ret.append(all_blocks[hh])
-        return ret
-
-    async def get_header_blocks_in_range(
-        self,
-        start: int,
-        stop: int,
-    ) -> Dict[bytes32, HeaderBlock]:
-
-        formatted_str = f"SELECT header_hash,block from full_blocks WHERE height >= {start} and height <= {stop}"
-
-        cursor = await self.db.execute(formatted_str)
-        rows = await cursor.fetchall()
-        await cursor.close()
-        ret: Dict[bytes32, HeaderBlock] = {}
-        for row in rows:
-            # Ugly hack, until full_block.get_block_header is rewritten as part of generator runner change
-            await asyncio.sleep(0.001)
-            header_hash = bytes.fromhex(row[0])
-            full_block: FullBlock = FullBlock.from_bytes(row[1])
-            ret[header_hash] = full_block.get_block_header()
-
         return ret
 
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:

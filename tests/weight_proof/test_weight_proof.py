@@ -6,21 +6,22 @@ from typing import Dict, List, Optional, Tuple
 import aiosqlite
 import pytest
 
-from chia.consensus.block_header_validation import validate_finished_header_block
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import Blockchain
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
-from chia.server.start_full_node import SERVICE_NAME
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.util.block_cache import BlockCache
-from chia.util.block_tools import test_constants
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from src.consensus.block_header_validation import validate_finished_header_block
+from src.consensus.block_record import BlockRecord
+from src.consensus.blockchain import Blockchain
+from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from src.consensus.full_block_to_block_record import block_to_block_record
+from src.full_node.block_store import BlockStore
+from src.full_node.coin_store import CoinStore
+from src.server.start_full_node import SERVICE_NAME
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from src.util.block_cache import BlockCache
+from src.util.block_tools import test_constants
+from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.generator_tools import get_block_header
 from tests.setup_nodes import bt
 
 try:
@@ -124,7 +125,7 @@ async def load_blocks_dont_validate(
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash
-        header_cache[block.header_hash] = block.get_block_header()
+        header_cache[block.header_hash] = get_block_header(block, list(block.get_included_reward_coins()), [])
         if sub_block.sub_epoch_summary_included is not None:
             sub_epoch_summaries[block.height] = sub_block.sub_epoch_summary_included
         prev_block = block

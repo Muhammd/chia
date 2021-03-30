@@ -8,21 +8,22 @@ from typing import Any, Dict, List, Optional, Set
 
 from blspy import AugSchemeMPL, G2Element
 
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import best_solution_program
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_solution import CoinSolution
-from chia.types.spend_bundle import SpendBundle
-from chia.util.byte_types import hexstr_to_bytes
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
-from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.json_util import dict_to_json_str
-from chia.wallet.block_record import HeaderBlockRecord
-from chia.wallet.cc_wallet.cc_info import CCInfo
-from chia.wallet.cc_wallet.cc_utils import (
+from src.consensus.cost_calculator import calculate_cost_of_program, NPCResult
+from src.full_node.bundle_tools import best_solution_program
+from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from src.protocols.wallet_protocol import PuzzleSolutionResponse
+from src.types.blockchain_format.coin import Coin
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.coin_solution import CoinSolution
+from src.types.spend_bundle import SpendBundle
+from src.util.byte_types import hexstr_to_bytes
+from src.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from src.util.ints import uint8, uint32, uint64, uint128
+from src.util.json_util import dict_to_json_str
+from src.wallet.block_record import HeaderBlockRecord
+from src.wallet.cc_wallet.cc_info import CCInfo
+from src.wallet.cc_wallet.cc_utils import (
     CC_MOD,
     SpendableCC,
     cc_puzzle_for_inner_puzzle,
@@ -243,10 +244,11 @@ class CCWallet:
             )
             program = best_solution_program(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-            cost_result: CostResult = calculate_cost_of_program(
-                program, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT, True
+            result: NPCResult = get_name_puzzle_conditions(program, True)
+            cost_result: uint64 = calculate_cost_of_program(
+                program, result, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT
             )
-            self.cost_of_single_tx = cost_result.cost
+            self.cost_of_single_tx = cost_result
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
 
         max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs
