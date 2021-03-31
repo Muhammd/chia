@@ -4,7 +4,7 @@ import logging
 import multiprocessing
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from src.consensus.block_body_validation import validate_block_body
 from src.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
@@ -167,6 +167,45 @@ class Blockchain(BlockchainInterface):
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return await self.block_store.get_full_block(header_hash)
 
+    async def get_previous_generators(self, block: Union[FullBlock, UnfinishedBlock]) -> List[SerializedProgram]:
+        ref_list = block.transactions_generator_ref_list
+        if len(ref_list) == 0:
+            return []
+
+        result: List[SerializedProgram] = []
+        previous_block_hash = block.prev_header_hash
+        if block.header_hash in self.__block_records:
+            for ref_height in block.transactions_generator_ref_list:
+                hash = self.height_to_hash(ref_height)
+                ref_block = await self.get_full_block(hash)
+                assert ref_block.transactions_generator is not None
+                result.append(ref_block.transactions_generator)
+        else:
+            peak = self.get_peak()
+            prev_block_record = await self.block_store.get_block_record(previous_block_hash)
+            assert prev_block_record is not None
+            fork = find_fork_point_in_chain(self, peak, prev_block_record)
+            assert fork != -1
+            curr = block
+            reorg_chain = {curr.height: curr}
+            while curr.height > fork:
+                if curr.height == 0:
+                    break
+                curr = await self.block_store.get_full_block(curr.prev_header_hash)
+                reorg_chain[curr.height] = curr
+
+            for ref_height in block.transactions_generator_ref_list:
+                if ref_height in reorg_chain:
+                    ref_block = reorg_chain[ref_height]
+                    result.append(ref_block.transactions_info)
+                else:
+                    hash = self.height_to_hash(ref_height)
+                    ref_block = await self.get_full_block(hash)
+                    assert ref_block.transactions_generator is not None
+                    result.append(ref_block.transactions_generator)
+
+        return result
+
     async def receive_block(
         self,
         block: FullBlock,
@@ -206,9 +245,8 @@ class Blockchain(BlockchainInterface):
             )
 
             if block.is_transaction_block():
-                prev_generators: List[SerializedProgram] = []
-                # TODO Fetch transaction generators
                 if block.transactions_generator is not None:
+                    prev_generators: List[SerializedProgram] = await self.get_previous_generators(block)
                     npc_result = get_name_puzzle_conditions(block.transactions_generator, False, prev_generators)
                     removals, additions = block_removals_and_additions(block, npc_result.npc_list)
                 else:
@@ -383,16 +421,7 @@ class Blockchain(BlockchainInterface):
     async def get_removals_and_additions(self, block: FullBlock) -> Tuple[List[bytes32], List[Coin]]:
         if block.is_transaction_block():
             if block.transactions_generator is not None:
-                prev_generators = []
-                if len(block.transactions_generator_ref_list) > 0:
-                    hashes = []
-                    for height in block.transactions_generator_ref_list:
-                        hash = self.height_to_hash(height)
-                        hashes.append(hash)
-                    blocks = await self.block_store.get_blocks_by_hash(hashes)
-                    for b in blocks:
-                        prev_generators.append(b.transactions_generator)
-
+                prev_generators: List[SerializedProgram] = await self.get_previous_generators(block)
                 npc_result = get_name_puzzle_conditions(block.transactions_generator, False, prev_generators)
                 removals, additions = block_removals_and_additions(block, npc_result.npc_list)
                 return removals, additions
@@ -531,8 +560,7 @@ class Blockchain(BlockchainInterface):
 
         npc_result = None
         if block.transactions_generator is not None:
-            prev_generators: List[SerializedProgram] = []
-            # TODO Fetch transaction generators
+            prev_generators: List[SerializedProgram] = await self.get_previous_generators(block)
             npc_result = get_name_puzzle_conditions(block.transactions_generator, False, prev_generators)
         error_code, cost_result = await validate_block_body(
             self.constants,
