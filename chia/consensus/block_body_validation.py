@@ -185,7 +185,6 @@ async def validate_block_body(
             if cost > constants.MAX_BLOCK_COST_CLVM:
                 return Err.BLOCK_COST_EXCEEDS_MAX, None
             if npc_result.error is not None:
-                breakpoint()
                 return Err.GENERATOR_RUNTIME_ERROR, None
 
             for npc in npc_list:

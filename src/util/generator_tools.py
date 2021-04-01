@@ -15,8 +15,6 @@ def get_block_header(block: FullBlock, addition_coins: List[Coin], removals_name
     # Create filter
     byte_array_tx: List[bytes32] = []
     if block.is_transaction_block():
-        assert removals_names is not None
-        assert addition_coins is not None
         for coin in addition_coins:
             byte_array_tx.append(bytearray(coin.puzzle_hash))
         for name in removals_names:

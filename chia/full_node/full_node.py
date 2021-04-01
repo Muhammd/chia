@@ -956,7 +956,6 @@ class FullNode:
                     error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
                     fork_height: Optional[uint32] = None
                 else:
-                    breakpoint()
                     raise ValueError(
                         f"Failed to validate block {header_hash} height "
                         f"{block.height}: {Err(pre_validation_results[0].error).name}"

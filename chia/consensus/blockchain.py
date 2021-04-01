@@ -174,33 +174,42 @@ class Blockchain(BlockchainInterface):
 
         result: List[SerializedProgram] = []
         previous_block_hash = block.prev_header_hash
-        if block.header_hash in self.__block_records:
+        if previous_block_hash in self.__block_records:
             for ref_height in block.transactions_generator_ref_list:
                 hash = self.height_to_hash(ref_height)
                 ref_block = await self.get_full_block(hash)
+                assert ref_block is not None
                 assert ref_block.transactions_generator is not None
                 result.append(ref_block.transactions_generator)
         else:
             peak = self.get_peak()
+            assert peak is not None
             prev_block_record = await self.block_store.get_block_record(previous_block_hash)
+            prev_block = await self.block_store.get_full_block(previous_block_hash)
+            assert prev_block is not None
             assert prev_block_record is not None
             fork = find_fork_point_in_chain(self, peak, prev_block_record)
             assert fork != -1
-            curr = block
-            reorg_chain = {curr.height: curr}
+            curr: Optional[FullBlock] = prev_block
+            assert curr is not None
+            reorg_chain = {prev_block.height: prev_block}
             while curr.height > fork:
                 if curr.height == 0:
                     break
                 curr = await self.block_store.get_full_block(curr.prev_header_hash)
+                assert curr is not None
                 reorg_chain[curr.height] = curr
 
             for ref_height in block.transactions_generator_ref_list:
                 if ref_height in reorg_chain:
                     ref_block = reorg_chain[ref_height]
-                    result.append(ref_block.transactions_info)
+                    assert ref_block is not None
+                    assert ref_block.transactions_generator is not None
+                    result.append(ref_block.transactions_generator)
                 else:
                     hash = self.height_to_hash(ref_height)
                     ref_block = await self.get_full_block(hash)
+                    assert ref_block is not None
                     assert ref_block.transactions_generator is not None
                     result.append(ref_block.transactions_generator)
 

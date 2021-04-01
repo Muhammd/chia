@@ -120,7 +120,7 @@ class TestCostCalculation:
                 f" ({disassembly} (() (q . ((65 '00000000000000000000000000000000' 0x0cbba106e000))) ())))))"
             ).as_bin()
         )
-        npc_result: NPCResult = get_name_puzzle_conditions(program, False)
+        npc_result: NPCResult = get_name_puzzle_conditions(program, True)
         assert npc_result.error is not None
         npc_result: NPCResult = get_name_puzzle_conditions(program, False)
         assert npc_result.error is None
