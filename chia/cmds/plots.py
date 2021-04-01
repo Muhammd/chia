@@ -58,6 +58,7 @@ def plots_cmd(ctx: click.Context):
 )
 @click.option("-f", "--farmer_public_key", help="Hex farmer public key", type=str, default=None)
 @click.option("-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None)
+@click.option("-P", "--show_progress", help="Show percentage complete updates during plotting", default=False, is_flag=True)
 @click.option(
     "-t",
     "--tmp_dir",
@@ -101,6 +102,7 @@ def create_cmd(
     memo: str,
     nobitfield: bool,
     exclude_final_dir: bool,
+    show_progress: bool,
 ):
     from chia.plotting.create_plots import create_plots
 
@@ -123,6 +125,7 @@ def create_cmd(
             self.memo = memo
             self.nobitfield = nobitfield
             self.exclude_final_dir = exclude_final_dir
+            self.show_progress = show_progress
 
     if size < 32 and not override_k:
         print("k=32 is the minimun size for farming.")

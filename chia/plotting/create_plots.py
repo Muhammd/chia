@@ -174,6 +174,7 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
                 args.stripe_size,
                 args.num_threads,
                 args.nobitfield,
+                args.show_progress,
             )
             finished_filenames.append(filename)
         else:
