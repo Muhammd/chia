@@ -24,7 +24,7 @@ from src.types.header_block import HeaderBlock
 from src.util.block_cache import BlockCache
 from src.util.errors import Err
 from src.util.generator_tools import get_block_header, block_removals_and_additions
-from src.util.ints import uint16, uint64
+from src.util.ints import uint16, uint64, uint32
 from src.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)
@@ -44,10 +44,10 @@ def batch_pre_validate_blocks(
     full_blocks_pickled: Optional[List[bytes]],
     header_blocks_pickled: Optional[List[bytes]],
     prev_transaction_generators: List[List[Optional[bytes]]],
+    npc_results: Dict[uint32, bytes],
     check_filter: bool,
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
-    validate_transactions: bool,
 ) -> List[bytes]:
     blocks = {}
     for k, v in blocks_pickled.items():
@@ -64,10 +64,18 @@ def batch_pre_validate_blocks(
                 additions: List[Coin] = list(block.get_included_reward_coins())
                 removals: List[bytes32] = []
                 npc_result: Optional[NPCResult] = None
+                if block.height in npc_results:
+                    npc_result = NPCResult.from_bytes(npc_results[block.height])
+                    assert npc_result is not None
+                    if npc_result.npc_list is not None:
+                        removals, additions = block_removals_and_additions(block, npc_result.npc_list)
+                    else:
+                        removals, additions = block_removals_and_additions(block, [])
+
                 if (
                     constants_dict["NETWORK_TYPE"] != NetworkType.MAINNET.value
-                    and validate_transactions
                     and generator is not None
+                    and npc_result is None
                 ):
                     npc_result = get_name_puzzle_conditions(generator, True, prev_transaction_generators)
                     removals, additions = block_removals_and_additions(block, npc_result.npc_list)
@@ -119,8 +127,8 @@ async def pre_validate_blocks_multiprocessing(
     block_records: BlockchainInterface,
     blocks: Sequence[Union[FullBlock, HeaderBlock]],
     pool: ProcessPoolExecutor,
-    validate_transactions: bool,
     check_filter: bool,
+    npc_results: Dict[uint32, NPCResult],
 ) -> Optional[List[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
@@ -129,7 +137,6 @@ async def pre_validate_blocks_multiprocessing(
 
     Args:
         check_filter:
-        validate_transactions:
         constants_json:
         pool:
         constants:
@@ -226,7 +233,9 @@ async def pre_validate_blocks_multiprocessing(
             block_records.remove_block_record(block.header_hash)
 
     recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_blocks_compressed.items()}
-
+    npc_results_pickled = {}
+    for k, v in npc_results.items():
+        npc_results_pickled[k] = bytes(v)
     futures = []
     # Pool of workers to validate blocks concurrently
     for i in range(0, len(blocks), batch_size):
@@ -259,10 +268,10 @@ async def pre_validate_blocks_multiprocessing(
                 b_pickled,
                 hb_pickled,
                 previous_generators,
+                npc_results_pickled,
                 check_filter,
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
-                validate_transactions,
             )
         )
     # Collect all results into one flat list

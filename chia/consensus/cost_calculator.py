@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Any, Optional
+from typing import List, Optional
 
 from src.consensus.condition_costs import ConditionCost
 from src.types.blockchain_format.program import SerializedProgram

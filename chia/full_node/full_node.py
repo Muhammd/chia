@@ -725,7 +725,7 @@ class FullNode:
         pre_validate_start = time.time()
         pre_validation_results: Optional[
             List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate)
+        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {})
         self.log.debug(f"Block pre-validation time: {time.time() - pre_validate_start}")
         if pre_validation_results is None:
             return False, False, None
@@ -945,9 +945,12 @@ class FullNode:
                 return None
             validation_start = time.time()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
+            npc_results = {}
+            if pre_validation_result is not None and pre_validation_result.npc_result is not None:
+                npc_results[block.height] = pre_validation_result.npc_result
             pre_validation_results: Optional[
                 List[PreValidationResult]
-            ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], pre_validation_result is None)
+            ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
             if pre_validation_results is None:
                 raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
             if pre_validation_results[0].error is not None:

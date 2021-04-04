@@ -1,5 +1,4 @@
 import time
-import traceback
 from typing import Dict, List, Optional
 
 from src.consensus.cost_calculator import NPCResult

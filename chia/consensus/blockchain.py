@@ -589,10 +589,10 @@ class Blockchain(BlockchainInterface):
         return PreValidationResult(None, required_iters, cost_result)
 
     async def pre_validate_blocks_multiprocessing(
-        self, blocks: List[FullBlock], validate_transactions: bool = True
+        self, blocks: List[FullBlock], npc_results: Dict[uint32, NPCResult]
     ) -> Optional[List[PreValidationResult]]:
         return await pre_validate_blocks_multiprocessing(
-            self.constants, self.constants_json, self, blocks, self.pool, validate_transactions, True
+            self.constants, self.constants_json, self, blocks, self.pool, True, npc_results
         )
 
     def contains_block(self, header_hash: bytes32) -> bool:
@@ -680,10 +680,12 @@ class Blockchain(BlockchainInterface):
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
         hashes = []
         for height in range(start, stop + 1):
-            hash = self.height_to_hash(uint32(start))
-            hashes.append(hash)
+            if self.contains_height(uint32(height)):
+                hash = self.height_to_hash(uint32(height))
+                hashes.append(hash)
         blocks: List[FullBlock] = await self.block_store.get_blocks_by_hash(hashes)
         header_blocks: Dict[bytes32, HeaderBlock] = {}
+
         for block in blocks:
             additions: List[CoinRecord] = await self.coin_store.get_coins_added_at_height(block.height)
             removed: List[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
@@ -691,6 +693,7 @@ class Blockchain(BlockchainInterface):
                 block, [record.coin for record in additions], [record.coin.name() for record in removed]
             )
             header_blocks[header.header_hash] = header
+
         return header_blocks
 
     async def get_header_block_by_height(self, height: int, header_hash: bytes32) -> Optional[HeaderBlock]:
