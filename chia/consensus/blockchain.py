@@ -6,35 +6,35 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-from src.consensus.block_body_validation import validate_block_body
-from src.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
-from src.consensus.block_record import BlockRecord
-from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.constants import ConsensusConstants
-from src.consensus.cost_calculator import NPCResult
-from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.consensus.full_block_to_block_record import block_to_block_record
-from src.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
-from src.full_node.block_store import BlockStore
-from src.full_node.coin_store import CoinStore
-from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.program import SerializedProgram
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.types.blockchain_format.vdf import VDFInfo
-from src.types.coin_record import CoinRecord
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
-from src.types.unfinished_block import UnfinishedBlock
-from src.types.unfinished_header_block import UnfinishedHeaderBlock
-from src.types.weight_proof import SubEpochChallengeSegment
-from src.util.errors import Err
-from src.util.generator_tools import get_block_header, block_removals_and_additions
-from src.util.ints import uint16, uint32, uint64, uint128
-from src.util.streamable import recurse_jsonify
+from chia.consensus.block_body_validation import validate_block_body
+from chia.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.constants import ConsensusConstants
+from chia.consensus.cost_calculator import NPCResult
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.find_fork_point import find_fork_point_in_chain
+from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from chia.full_node.block_store import BlockStore
+from chia.full_node.coin_store import CoinStore
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.blockchain_format.vdf import VDFInfo
+from chia.types.coin_record import CoinRecord
+from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chia.types.full_block import FullBlock
+from chia.types.header_block import HeaderBlock
+from chia.types.unfinished_block import UnfinishedBlock
+from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.types.weight_proof import SubEpochChallengeSegment
+from chia.util.errors import Err
+from chia.util.generator_tools import get_block_header, block_removals_and_additions
+from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.streamable import recurse_jsonify
 
 log = logging.getLogger(__name__)
 
@@ -334,7 +334,7 @@ class Blockchain(BlockchainInterface):
         genesis: bool,
         fork_point_with_peak: Optional[uint32],
         npc_result: Optional[NPCResult],
-    ) -> Optional[uint32]:
+    ) -> Tuple[Optional[uint32], Optional[uint32], List[BlockRecord]]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
@@ -359,7 +359,6 @@ class Blockchain(BlockchainInterface):
                 return uint32(0), uint32(0), [block_record]
             return None, None, []
 
-
         assert peak is not None
         if block_record.weight > peak.weight:
             # Find the fork. if the block is just being appended, it will return the peak
@@ -369,60 +368,47 @@ class Blockchain(BlockchainInterface):
             else:
                 fork_height = find_fork_point_in_chain(self, block_record, peak)
 
-            # Begins a transaction, because we want to ensure that the coin store and block store are only updated
-            # in sync.
-            await self.block_store.begin_transaction()
-            try:
-                # Rollback to fork
-                await self.coin_store.rollback_to_block(fork_height)
-                # Rollback sub_epoch_summaries
-                heights_to_delete = []
-                for ses_included_height in self.__sub_epoch_summaries.keys():
-                    if ses_included_height > fork_height:
-                        heights_to_delete.append(ses_included_height)
-                for height in heights_to_delete:
-                    log.info(f"delete ses at height {height}")
-                    del self.__sub_epoch_summaries[height]
+            # Rollback to fork
+            await self.coin_store.rollback_to_block(fork_height)
+            # Rollback sub_epoch_summaries
+            heights_to_delete = []
+            for ses_included_height in self.__sub_epoch_summaries.keys():
+                if ses_included_height > fork_height:
+                    heights_to_delete.append(ses_included_height)
+            for height in heights_to_delete:
+                log.info(f"delete ses at height {height}")
+                del self.__sub_epoch_summaries[height]
 
-                if len(heights_to_delete) > 0:
-                    # remove segments from prev fork
-                    log.info(f"remove segments for se above {fork_height}")
-                    await self.block_store.delete_sub_epoch_challenge_segments(uint32(fork_height))
+            if len(heights_to_delete) > 0:
+                # remove segments from prev fork
+                log.info(f"remove segments for se above {fork_height}")
+                await self.block_store.delete_sub_epoch_challenge_segments(uint32(fork_height))
 
-                # Collect all blocks from fork point to new peak
-                blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
-                curr = block_record.header_hash
+            # Collect all blocks from fork point to new peak
+            blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
+            curr = block_record.header_hash
 
-                while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
-                    fetched_full_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
-                    fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
-                    assert fetched_full_block is not None
-                    assert fetched_block_record is not None
-                    blocks_to_add.append((fetched_full_block, fetched_block_record))
-                    if fetched_full_block.height == 0:
-                        # Doing a full reorg, starting at height 0
-                        break
-                    curr = fetched_block_record.prev_hash
+            while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
+                fetched_full_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
+                fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
+                assert fetched_full_block is not None
+                assert fetched_block_record is not None
+                blocks_to_add.append((fetched_full_block, fetched_block_record))
+                if fetched_full_block.height == 0:
+                    # Doing a full reorg, starting at height 0
+                    break
+                curr = fetched_block_record.prev_hash
 
-                for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
-                    self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
-                    if fetched_block_record.is_transaction_block:
-                        removals, additions = await self.get_removals_and_additions(fetched_full_block)
-                        await self.coin_store.new_block(fetched_full_block, additions, removals)
-                    if fetched_block_record.sub_epoch_summary_included is not None:
-                        self.__sub_epoch_summaries[
-                            fetched_block_record.height
-                        ] = fetched_block_record.sub_epoch_summary_included
+            records_to_add = []
+            for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
+                records_to_add.append(fetched_block_record)
+                if fetched_block_record.is_transaction_block:
+                    removals, additions = await self.get_removals_and_additions(fetched_full_block)
+                    await self.coin_store.new_block(fetched_full_block, additions, removals)
 
-                # Changes the peak to be the new peak
-                await self.block_store.set_peak(block_record.header_hash)
-                self._peak_height = block_record.height
-                await self.block_store.commit_transaction()
-            except Exception:
-                await self.block_store.rollback_transaction()
-                raise
-
-            return uint32(max(fork_height, 0))
+            # Changes the peak to be the new peak
+            await self.block_store.set_peak(block_record.header_hash)
+            return uint32(max(fork_height, 0)), block_record.height, records_to_add
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
         return None, None, []

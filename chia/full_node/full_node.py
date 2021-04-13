@@ -1636,12 +1636,15 @@ class FullNode:
                     min_height = max(0, max_height - 1000)
                 batches_finished = 0
                 self.log.info("Scanning the blockchain for uncompact blocks.")
+                assert max_height is not None
+                assert min_height is not None
                 for h in range(min_height, max_height, 100):
                     # Got 10 times the target header count, sampling the target headers should contain
                     # enough randomness to split the work between blueboxes.
                     if len(broadcast_list) > target_uncompact_proofs * 10:
                         break
                     stop_height = min(h + 99, max_height)
+                    assert min_height is not None
                     headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height)
                     records: Dict[bytes32, BlockRecord] = {}
                     if sanitize_weight_proof_only:

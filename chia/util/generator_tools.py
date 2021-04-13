@@ -1,14 +1,14 @@
 from typing import List, Tuple
 from chiabip158 import PyBIP158
 
-from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from src.types.announcement import Announcement
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
-from src.types.name_puzzle_condition import NPC
-from src.util.condition_tools import created_announcements_for_conditions_dict, created_outputs_for_conditions_dict
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.full_block import FullBlock
+from chia.types.header_block import HeaderBlock
+from chia.types.name_puzzle_condition import NPC
+from chia.util.condition_tools import created_announcements_for_conditions_dict, created_outputs_for_conditions_dict
 
 
 def get_block_header(block: FullBlock, addition_coins: List[Coin], removals_names: List[bytes32]) -> HeaderBlock:
