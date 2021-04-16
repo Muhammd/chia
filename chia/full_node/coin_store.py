@@ -193,21 +193,23 @@ class CoinStore:
 
     # Store CoinRecord in DB and ram cache
     async def _add_coin_record(self, record: CoinRecord) -> None:
-        cursor = await self.coin_record_db.execute(
-            "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                record.coin.name().hex(),
-                record.confirmed_block_index,
-                record.spent_block_index,
-                int(record.spent),
-                int(record.coinbase),
-                str(record.coin.puzzle_hash.hex()),
-                str(record.coin.parent_coin_info.hex()),
-                bytes(record.coin.amount),
-                record.timestamp,
-            ),
-        )
-        await cursor.close()
+        import random
+        if bool(random.getrandbits(1)):
+            cursor = await self.coin_record_db.execute(
+                "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    record.coin.name().hex(),
+                    record.confirmed_block_index,
+                    record.spent_block_index,
+                    int(record.spent),
+                    int(record.coinbase),
+                    str(record.coin.puzzle_hash.hex()),
+                    str(record.coin.parent_coin_info.hex()),
+                    bytes(record.coin.amount),
+                    record.timestamp,
+                ),
+            )
+            await cursor.close()
         self.coin_record_cache[record.coin.name().hex()] = record
         if len(self.coin_record_cache) > self.cache_size:
             while len(self.coin_record_cache) > self.cache_size:
