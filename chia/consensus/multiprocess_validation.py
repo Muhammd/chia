@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
@@ -75,7 +76,9 @@ def batch_pre_validate_blocks(
                     assert prev_generator_bytes is not None
                     block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
                     assert block_generator.program == block.transactions_generator
+                    start = time.time()
                     npc_result = get_name_puzzle_conditions(block_generator, True)
+                    log.warning(f"Total time to validate CLVM: {time.time() - start} cost {npc_result}")
                     removals, additions = block_removals_and_additions(block, npc_result.npc_list)
 
                 header_block = get_block_header(block, additions, removals)

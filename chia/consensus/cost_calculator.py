@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -15,6 +16,9 @@ class NPCResult(Streamable):
     error: Optional[uint16]
     npc_list: List[NPC]
     clvm_cost: uint64  # CLVM cost only, cost of conditions and tx size is not included
+
+
+log = logging.getLogger(__name__)
 
 
 def calculate_cost_of_program(program: SerializedProgram, npc_result: NPCResult, cost_per_byte: int) -> uint64:
@@ -55,6 +59,12 @@ def calculate_cost_of_program(program: SerializedProgram, npc_result: NPCResult,
             else:
                 # We ignore unknown conditions in order to allow for future soft forks
                 pass
+    conditions_cost = total_cost - npc_result.clvm_cost
+    log.warning(f"CLVM cost: {npc_result.clvm_cost} percent {npc_result.clvm_cost / total_cost}")
+    log.warning(f"Conditions cost: {conditions_cost} percent {conditions_cost / total_cost}")
+    log.warning(
+        f"Bytes cost: {len(bytes(program)) * cost_per_byte} percent {len(bytes(program)) * cost_per_byte / total_cost}"
+    )
 
     # Add raw size of the program
     total_cost += len(bytes(program)) * cost_per_byte

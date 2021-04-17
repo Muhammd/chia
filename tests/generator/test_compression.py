@@ -1,4 +1,6 @@
 # flake8: noqa: F501
+import logging
+import time
 from unittest import TestCase
 
 from chia.full_node.bundle_tools import (
@@ -38,6 +40,9 @@ original_generator = hexstr_to_bytes(
 )  # noqa
 
 
+log = logging.getLogger(__name__)
+
+
 class TestCompression(TestCase):
     def test_spend_bundle_suitable(self):
         sb: SpendBundle = make_spend_bundle(1)
@@ -47,14 +52,18 @@ class TestCompression(TestCase):
         pass
 
     def test_compressed_block_results(self):
-        sb: SpendBundle = make_spend_bundle(1)
+        sb: SpendBundle = make_spend_bundle(2000)
         start, end = match_standard_transaction_at_any_index(original_generator)
         ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
         c = compressed_spend_bundle_solution(ca, sb)
         s = simple_solution_generator(sb)
         assert c != s
+        start = time.time()
         cost_c, result_c = run_generator(c)
+        log.warning(f"compressed {time.time() - start}")
+        start = time.time()
         cost_s, result_s = run_generator(s)
+        log.warning(f"simple {time.time() - start}")
         print(result_c)
         assert result_c is not None
         assert result_s is not None

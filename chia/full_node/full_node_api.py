@@ -807,6 +807,7 @@ class FullNodeAPI:
                 foliage_sb_data_hash,
                 foliage_transaction_block_hash,
             )
+            # await co
             return make_msg(ProtocolMessageTypes.request_signed_values, message)
 
     @api_request
