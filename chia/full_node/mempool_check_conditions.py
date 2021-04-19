@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Dict, List, Optional, Set
 
@@ -18,6 +19,8 @@ from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.lowlevel_generator import get_generator
 
 GENERATOR_MOD = get_generator()
+
+log = logging.getLogger(__name__)
 
 
 def mempool_assert_announcement(condition: ConditionWithArgs, announcements: Set[bytes32]) -> Optional[Err]:
@@ -135,6 +138,8 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
 
 
 def get_name_puzzle_conditions(generator: BlockGenerator, max_cost: int, safe_mode: bool) -> NPCResult:
+    if len(generator.generator_refs()) > 0:
+        log.warning(f"Generator refs hash {generator.program.get_tree_hash()}")
     try:
         block_program, block_program_args = setup_generator_args(generator)
         if safe_mode:

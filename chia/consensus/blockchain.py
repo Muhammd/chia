@@ -502,7 +502,7 @@ class Blockchain(BlockchainInterface):
             block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
             assert block_generator is not None
             npc_result = get_name_puzzle_conditions(block_generator, self.constants.MAX_BLOCK_COST_CLVM, False)
-        log.warning("Validating unfinished block body")
+        log.warning("Validating unfinished header block")
         error_code, cost_result = await validate_block_body(
             self.constants,
             self,
