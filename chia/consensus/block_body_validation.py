@@ -163,9 +163,15 @@ async def validate_block_body(
         #     the generator for this block (or zeroes if no generator)
         if block.transactions_generator is not None:
             if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
+                log.error(f"Block {block}")
+                log.error(
+                    f"INVALID_TRANSACTIONS_GENERATOR_ROOT case 1 {block.transactions_info} {block.transactions_info.generator_root}"
+                )
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
         else:
             if block.transactions_info.generator_root != bytes([0] * 32):
+                log.error(f"Block {block}")
+                log.error(f"INVALID_TRANSACTIONS_GENERATOR_ROOT case 2, {block.transactions_info.generator_root}")
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
 
         # 6b. The generator_ref_list must be the hash of the serialized bytes of
@@ -249,17 +255,13 @@ async def validate_block_body(
 
         if filter_hash != block.foliage_transaction_block.filter_hash:
             log.error(block)
-            log.error(
-                f"FAILING BLOCK BODY VALIDATION  {block.header_hash} {filter_hash} {block.foliage_transaction_block.filter_hash} Filter: {block.transactions_filter}"
-            )
+            log.error(f"FAILING BLOCK BODY VALIDATION  {filter_hash} {block.foliage_transaction_block.filter_hash}")
             log.error(f"Len additions and removals: {len(additions)} {len(removals)}")
             log.error(f"Additions: {additions} removals: {removals}")
             return Err.INVALID_TRANSACTIONS_FILTER_HASH, None
         else:
             log.debug(block)
-            log.debug(
-                f"SUCCESS BLOCK BODY VALIDATION  {block.header_hash} {filter_hash} {block.foliage_transaction_block.filter_hash} Filter: {block.transactions_filter}"
-            )
+            log.debug(f"SUCCESS BLOCK BODY VALIDATION {filter_hash} {block.foliage_transaction_block.filter_hash}")
             log.debug(f"Len additions and removals: {len(additions)} {len(removals)}")
             log.debug(f"Additions: {additions} removals: {removals}")
 
