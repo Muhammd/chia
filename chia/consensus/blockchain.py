@@ -344,6 +344,7 @@ class Blockchain(BlockchainInterface):
                 if fetched_block_record.is_transaction_block:
                     if fetched_block_record.header_hash == block_record.header_hash:
                         if fetched_full_block.transactions_generator is not None:
+                            assert npc_result is not None
                             removals, additions = block_removals_and_additions(fetched_full_block, npc_result.npc_list)
                         else:
                             removals, additions = [], list(fetched_full_block.get_included_reward_coins())
@@ -521,8 +522,6 @@ class Blockchain(BlockchainInterface):
 
         if error_code is not None:
             return PreValidationResult(uint16(error_code.value), None, None)
-        else:
-            log.error(f"Failing validation {error_code}")
 
         return PreValidationResult(None, required_iters, cost_result)
 

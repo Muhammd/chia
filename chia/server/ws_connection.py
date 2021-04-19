@@ -281,6 +281,7 @@ class WSChiaConnection:
 
         # The request nonce is an integer between 0 and 2**16 - 1, which is used to match requests to responses
         request_id = self.request_nonce
+        # self.log.debug(f"Using nonce: {self.}")
         self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 16 - 1) else uint16(0)
 
         message = Message(message_no_id.type, request_id, message_no_id.data)

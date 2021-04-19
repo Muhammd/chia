@@ -248,7 +248,20 @@ async def validate_block_body(
         filter_hash = std_hash(encoded_filter)
 
         if filter_hash != block.foliage_transaction_block.filter_hash:
+            log.error(block)
+            log.error(
+                f"FAILING BLOCK BODY VALIDATION  {block.header_hash} {filter_hash} {block.foliage_transaction_block.filter_hash} Filter: {block.transactions_filter}"
+            )
+            log.error(f"Len additions and removals: {len(additions)} {len(removals)}")
+            log.error(f"Additions: {additions} removals: {removals}")
             return Err.INVALID_TRANSACTIONS_FILTER_HASH, None
+        else:
+            log.debug(block)
+            log.debug(
+                f"SUCCESS BLOCK BODY VALIDATION  {block.header_hash} {filter_hash} {block.foliage_transaction_block.filter_hash} Filter: {block.transactions_filter}"
+            )
+            log.debug(f"Len additions and removals: {len(additions)} {len(removals)}")
+            log.debug(f"Additions: {additions} removals: {removals}")
 
         # 13. Check for duplicate outputs in additions
         addition_counter = collections.Counter(_.name() for _ in additions + coinbase_additions)
