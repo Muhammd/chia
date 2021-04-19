@@ -521,6 +521,8 @@ class Blockchain(BlockchainInterface):
 
         if error_code is not None:
             return PreValidationResult(uint16(error_code.value), None, None)
+        else:
+            log.error(f"Failing validation {error_code}")
 
         return PreValidationResult(None, required_iters, cost_result)
 
