@@ -298,6 +298,7 @@ async def validate_block_body(
             curr = prev_block
             assert curr is not None
             while curr.height > fork_h:
+                log.warning("Getting block generator in fork")
                 # Coin store doesn't contain coins from fork, we have to run generator for each block in fork
                 if curr.transactions_generator is not None:
                     curr_block_generator: Optional[BlockGenerator] = await get_block_generator(curr)

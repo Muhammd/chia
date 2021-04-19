@@ -23,6 +23,7 @@ from chia.types.header_block import HeaderBlock
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, block_removals_and_additions
+from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64, uint32
 from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 
@@ -71,13 +72,17 @@ def batch_pre_validate_blocks(
                         removals, additions = block_removals_and_additions(block, [])
 
                 if block.transactions_generator is not None and npc_result is None:
+                    log.warning("")
                     prev_generator_bytes = prev_transaction_generators[i]
                     assert prev_generator_bytes is not None
                     block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
                     assert block_generator.program == block.transactions_generator
                     npc_result = get_name_puzzle_conditions(block_generator, constants.MAX_BLOCK_COST_CLVM, True)
                     removals, additions = block_removals_and_additions(block, npc_result.npc_list)
-
+                log.warning(f"Removals, additions: {len(removals)} {len(additions)}")
+                for gen in prev_transaction_generators:
+                    if gen is not None:
+                        log.warning(f"Prev gen hash: {std_hash(gen)}")
                 header_block = get_block_header(block, additions, removals)
                 required_iters, error = validate_finished_header_block(
                     constants,

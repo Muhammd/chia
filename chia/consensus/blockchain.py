@@ -342,7 +342,11 @@ class Blockchain(BlockchainInterface):
             for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
                 records_to_add.append(fetched_block_record)
                 if fetched_block_record.is_transaction_block:
-                    removals, additions = await self.get_removals_and_additions(fetched_full_block)
+                    if fetched_block_record.header_hash == block_record.header_hash:
+                        removals, additions = block_removals_and_additions(fetched_full_block, npc_result.npc_list)
+                    else:
+                        log.warning("Recomputing removals and additions")
+                        removals, additions = await self.get_removals_and_additions(fetched_full_block)
                     await self.coin_store.new_block(fetched_full_block, additions, removals)
 
             # Changes the peak to be the new peak
@@ -498,6 +502,7 @@ class Blockchain(BlockchainInterface):
             block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
             assert block_generator is not None
             npc_result = get_name_puzzle_conditions(block_generator, self.constants.MAX_BLOCK_COST_CLVM, False)
+        log.warning("Validating unfinished block body")
         error_code, cost_result = await validate_block_body(
             self.constants,
             self,
