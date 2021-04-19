@@ -139,7 +139,8 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
 
 def get_name_puzzle_conditions(generator: BlockGenerator, max_cost: int, safe_mode: bool) -> NPCResult:
     if len(generator.generator_refs()) > 0:
-        log.warning(f"Generator refs hash {generator.program.get_tree_hash()}")
+        for ref in generator.generator_refs():
+            log.warning(f"Generator refs hash {ref.get_tree_hash()}")
     try:
         block_program, block_program_args = setup_generator_args(generator)
         if safe_mode:
