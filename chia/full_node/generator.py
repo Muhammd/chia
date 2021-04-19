@@ -51,7 +51,7 @@ def create_compressed_generator(
     start = original_generator.start
     end = original_generator.end
     program = DECOMPRESS_BLOCK.curry(
-        DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, Program.to(start), Program.to(end), [compressed_cse_list]
+        DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, Program.to(start), Program.to(end), compressed_cse_list
     )
     generator_arg = GeneratorArg(original_generator.block_height, original_generator.generator)
     return BlockGenerator(program, [generator_arg])
