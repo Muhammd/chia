@@ -67,7 +67,7 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 400000000})
+    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 40000000})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -707,7 +707,7 @@ class TestFullNodeProtocol:
         for i in range(5):
             conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
             # This should fit in one transaction
-            for _ in range(100):
+            for _ in range(5):
                 receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
                 puzzle_hashes.append(receiver_puzzlehash)
                 output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(10000000)])

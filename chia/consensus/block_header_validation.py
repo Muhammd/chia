@@ -809,6 +809,7 @@ def validate_unfinished_header_block(
         # 25. The filter hash in the Foliage Block must be the hash of the filter
         if check_filter:
             if header_block.foliage_transaction_block.filter_hash != std_hash(header_block.transactions_filter):
+                breakpoint()
                 return None, ValidationError(Err.INVALID_TRANSACTIONS_FILTER_HASH)
 
         # 26a. The timestamp in Foliage Block must not be over 5 minutes in the future

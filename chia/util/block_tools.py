@@ -19,6 +19,7 @@ from chia.full_node.bundle_tools import (
     detect_potential_template_generator,
     simple_solution_generator,
 )
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.plotting.create_plots import create_plots
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
@@ -60,6 +61,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
 from chia.util.config import load_config, save_config
+from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
@@ -428,13 +430,26 @@ class BlockTools:
                                 block_generator: Optional[BlockGenerator] = best_solution_generator_from_template(
                                     previous_generator, transaction_data
                                 )
+                                npc_result = get_name_puzzle_conditions(block_generator,
+                                                                        constants.MAX_BLOCK_COST_CLVM,
+                                                                        False)
+                                removals_in_curr, additions_in_curr = tx_removals_and_additions(npc_result.npc_list)
+                                if additions_in_curr != additions:
+                                    breakpoint()
                             else:
                                 block_generator = simple_solution_generator(transaction_data)
+                                npc_result = get_name_puzzle_conditions(block_generator,
+                                                                        constants.MAX_BLOCK_COST_CLVM,
+                                                                        False)
+                                removals_in_curr, additions_in_curr = tx_removals_and_additions(npc_result.npc_list)
+                                if additions_in_curr != additions:
+                                    breakpoint()
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
                             block_generator = None
                             aggregate_signature = G2Element()
+
 
                         full_block, block_record = get_full_block_and_block_record(
                             constants,
