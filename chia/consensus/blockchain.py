@@ -710,13 +710,16 @@ class Blockchain(BlockchainInterface):
             return None
         if len(ref_list) == 0:
             return BlockGenerator(block.transactions_generator, [])
-
+        log.warning(
+            f"Fetching ref list: {block.transactions_generator_ref_list}. Len additinoal blocks {len(additional_blocks)}"
+        )
         result: List[GeneratorArg] = []
         previous_block_hash = block.prev_header_hash
         if (
             self.try_block_record(previous_block_hash)
             and self.height_to_hash(self.block_record(previous_block_hash).height) == previous_block_hash
         ):
+            log.warning("Get_generator 1")
             # We are not in a reorg, no need to look up alternate header hashes (we can get them from height_to_hash)
             for ref_height in block.transactions_generator_ref_list:
                 header_hash = self.height_to_hash(ref_height)
@@ -726,6 +729,7 @@ class Blockchain(BlockchainInterface):
                 result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
         else:
             # First tries to find the blocks in additional_blocks
+            log.warning("Get_generator 2")
             reorg_chain: Dict[uint32, FullBlock] = {}
             curr: Union[FullBlock, UnfinishedBlock] = block
             while curr.prev_header_hash in additional_blocks:
@@ -737,6 +741,7 @@ class Blockchain(BlockchainInterface):
 
             peak: Optional[BlockRecord] = self.get_peak()
             if self.contains_block(curr.prev_header_hash) and peak is not None:
+                log.warning(f"contains..")
                 # Then we look up blocks up to fork point one at a time, backtracking
                 previous_block_hash = curr.prev_header_hash
                 prev_block_record = await self.block_store.get_block_record(previous_block_hash)
@@ -748,17 +753,20 @@ class Blockchain(BlockchainInterface):
                 assert curr_2 is not None and isinstance(curr_2, FullBlock)
                 reorg_chain[curr_2.height] = curr_2
                 while curr_2.height > fork and curr_2.height > 0:
+                    log.warning(f"Backtracking {curr_2.height} ")
                     curr_2 = await self.block_store.get_full_block(curr_2.prev_header_hash)
                     assert curr_2 is not None
                     reorg_chain[curr_2.height] = curr_2
 
             for ref_height in block.transactions_generator_ref_list:
                 if ref_height in reorg_chain:
+                    log.warning(f"Found height {ref_height}")
                     ref_block = reorg_chain[ref_height]
                     assert ref_block is not None
                     assert ref_block.transactions_generator is not None
                     result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
                 else:
+                    log.warning(f"Not found height {ref_height}")
                     header_hash = self.height_to_hash(ref_height)
                     ref_block = await self.get_full_block(header_hash)
                     assert ref_block is not None
