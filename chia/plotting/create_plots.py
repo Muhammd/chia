@@ -11,6 +11,7 @@ from chia.plotting.plot_tools import add_plot_directory, stream_plot_info_ph, st
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import config_path_for_filename, load_config
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir
@@ -52,7 +53,7 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
 
     farmer_public_key: G1Element
     if args.farmer_public_key is not None:
-        farmer_public_key = G1Element.from_bytes(bytes.fromhex(args.farmer_public_key))
+        farmer_public_key = G1Element.from_bytes(hexstr_to_bytes(args.farmer_public_key))
     else:
         farmer_public_key = get_farmer_public_key(args.alt_fingerprint)
 
